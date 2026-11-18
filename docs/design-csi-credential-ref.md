@@ -44,3 +44,24 @@ The Role must be created in the Secret namespace and bound to the deployed
 atelet ServiceAccount. Do not apply this permission until the target namespace,
 Secret name, and atelet ServiceAccount have been checked against live cluster
 state.
+
+## POC result
+
+Validated on the kind `kagent-substrate` cluster on 2026-11-18 with the fork
+commit `5ba30577a`:
+
+- `ate-api-server` and `atelet` ran the forked images.
+- A new ActorTemplate containing `credentialRef.namespace=juicefs-poc` and
+  `credentialRef.name=juicefs-secret` was accepted by the forked API and client.
+- A new Actor carried the reference through the atelet workload request.
+- atelet mounted the JuiceFS volume at the Actor path.
+- The JuiceFS NodePublish log reported the six expected Secret keys and the
+  mount completed in about 594 ms.
+- Actor status retained the existing CSI volume context and did not contain
+  Secret data. Logs did not contain Secret values.
+
+The complete Actor Ready check remained blocked after the successful mount by a
+separate gVisor v6 asset fetch failure. The asset URL at `172.80.0.1:8000`
+returned `InvalidArgument`, so the Harness wakeup probe never became ready.
+This is an environment asset-service failure; it is not reported as a passing
+Agent E2E test for this change.
