@@ -392,6 +392,7 @@ func TestAppendExternalVolumes(t *testing.T) {
 				Name: "vol-1",
 				External: &ateapi.ExternalVolumeSource{Template: &ateapi.ExternalVolumeTemplate{
 					StorageClassName: "pd-standard",
+					CredentialRef:    &ateapi.KubernetesSecretReference{Namespace: "juicefs-poc", Name: "juicefs-secret"},
 				}},
 			},
 			{
@@ -453,6 +454,7 @@ func TestAppendExternalVolumes(t *testing.T) {
 							VolumeType:      "pd-standard",
 							VolumeContext:   map[string]string{"foo": "bar"},
 							PublishContext:  tt.wantPublishCtx,
+							CredentialRef:   &ateletpb.KubernetesSecretReference{Namespace: "juicefs-poc", Name: "juicefs-secret"},
 						},
 					},
 				},

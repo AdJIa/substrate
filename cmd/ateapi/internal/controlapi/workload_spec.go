@@ -161,14 +161,21 @@ func appendExternalVolumes(workloadSpec *ateletpb.WorkloadSpec, template *ateapi
 			if storageVolID == "" {
 				return fmt.Errorf("volume %s not found for actor %s", vol.GetName(), actor.GetMetadata().GetName())
 			}
+			external := &ateletpb.ExternalVolumeSource{
+				StorageVolumeId: storageVolID,
+				VolumeType:      volType,
+				VolumeContext:   volCtx,
+				PublishContext:  volumePublishContexts[vol.GetName()],
+			}
+			if ref := vol.GetExternal().GetTemplate().GetCredentialRef(); ref != nil {
+				external.CredentialRef = &ateletpb.KubernetesSecretReference{
+					Namespace: ref.GetNamespace(),
+					Name:      ref.GetName(),
+				}
+			}
 			workloadSpec.Volumes = append(workloadSpec.Volumes, &ateletpb.Volume{
-				Name: vol.GetName(),
-				External: &ateletpb.ExternalVolumeSource{
-					StorageVolumeId: storageVolID,
-					VolumeType:      volType,
-					VolumeContext:   volCtx,
-					PublishContext:  volumePublishContexts[vol.GetName()],
-				},
+				Name:     vol.GetName(),
+				External: external,
 			})
 		}
 	}

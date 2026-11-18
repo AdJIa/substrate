@@ -418,6 +418,46 @@ func TestPlugin_MountVolume(t *testing.T) {
 	}
 }
 
+func TestPlugin_MountVolumePassesSecretsToStageAndPublish(t *testing.T) {
+	var stageSecrets, publishSecrets map[string]string
+	driver := &mockCSIDriver{
+		nodeStageVolumeFunc: func(_ context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
+			stageSecrets = req.GetSecrets()
+			return &csi.NodeStageVolumeResponse{}, nil
+		},
+		nodePublishVolumeFunc: func(_ context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+			publishSecrets = req.GetSecrets()
+			return &csi.NodePublishVolumeResponse{}, nil
+		},
+	}
+	endpoint, cleanup := startMockCSIDriver(t, driver)
+	defer cleanup()
+
+	client, err := NewCSIClient(endpoint, nil)
+	if err != nil {
+		t.Fatalf("failed to create CSI client: %v", err)
+	}
+	defer client.Close()
+
+	plugin := NewPlugin(client)
+	plugin.stagingDirPrefix = filepath.Join(t.TempDir(), "staging")
+	plugin.InitNodeCapabilities(context.Background())
+	want := map[string]string{"name": "juicefs", "access-key": "access", "secret-key": "secret"}
+	if err := plugin.MountVolume(context.Background(), volume.MountVolumeRequest{
+		VolumeID:   "test-vol",
+		TargetPath: filepath.Join(t.TempDir(), "target"),
+		Secrets:    want,
+	}); err != nil {
+		t.Fatalf("MountVolume failed: %v", err)
+	}
+	if diff := cmp.Diff(want, stageSecrets); diff != "" {
+		t.Errorf("NodeStageVolume secrets mismatch (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff(want, publishSecrets); diff != "" {
+		t.Errorf("NodePublishVolume secrets mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func TestPlugin_UnmountVolume(t *testing.T) {
 	driver := &mockCSIDriver{}
 	endpoint, cleanup := startMockCSIDriver(t, driver)

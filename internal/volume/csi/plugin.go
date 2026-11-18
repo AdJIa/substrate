@@ -271,6 +271,7 @@ func (p *Plugin) MountVolume(ctx context.Context, req volume.MountVolumeRequest)
 		Readonly:          false,
 		VolumeContext:     req.VolumeContext,
 		PublishContext:    req.PublishContext,
+		Secrets:           req.Secrets,
 	}
 
 	if _, err := p.client.NodePublishVolume(ctx, csiReq); err != nil {
@@ -297,6 +298,7 @@ func (p *Plugin) stageVolume(ctx context.Context, req volume.MountVolumeRequest)
 		VolumeCapability:  getStandardCapabilities()[0], // Use primary capability
 		VolumeContext:     req.VolumeContext,
 		PublishContext:    req.PublishContext,
+		Secrets:           req.Secrets,
 	}
 
 	_, err := p.client.NodeStageVolume(ctx, csiReq)

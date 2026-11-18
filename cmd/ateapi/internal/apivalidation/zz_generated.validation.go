@@ -4178,6 +4178,36 @@ func Validate_ExternalVolumeTemplate(
 		errs = append(errs, fn(fldPath.Child("storage_class_name"), &obj.StorageClassName, oldVal, oldObj != nil)...)
 	}
 
+	{ // field v1.ExternalVolumeTemplate.CredentialRef
+		fn := func(
+			fldPath *field.Path,
+			obj, oldObj *v1.KubernetesSecretReference,
+			oldValueCorrelated bool) (errs field.ErrorList) {
+			// don't revalidate unchanged data
+			if oldValueCorrelated && op.Type == operation.Update {
+				if ateDeepEqual(obj, oldObj) {
+					return nil
+				}
+			}
+			// call field-attached validations
+			earlyReturn := false
+			if e := validate.OptionalPointer(ctx, op, fldPath, obj, oldObj).MarkShortCircuit(); len(e) != 0 {
+				earlyReturn = true
+			}
+			if earlyReturn {
+				return // do not proceed
+			}
+			// call the type's validation function
+			errs = append(errs, Validate_KubernetesSecretReference(ctx, op, fldPath, obj, oldObj)...)
+			return
+		}
+		oldVal := safe.Field(oldObj,
+			func(oldObj *v1.ExternalVolumeTemplate) *v1.KubernetesSecretReference {
+				return oldObj.CredentialRef
+			})
+		errs = append(errs, fn(fldPath.Child("credential_ref"), obj.CredentialRef, oldVal, oldObj != nil)...)
+	}
+
 	return errs
 }
 
@@ -5307,6 +5337,79 @@ func Validate_ImageVolumeSource(
 				return &oldObj.Reference
 			})
 		errs = append(errs, fn(fldPath.Child("reference"), &obj.Reference, oldVal, oldObj != nil)...)
+	}
+
+	return errs
+}
+
+// Validate_KubernetesSecretReference validates an instance of KubernetesSecretReference according
+// to declarative validation rules in the API schema.
+func Validate_KubernetesSecretReference(
+	ctx context.Context, op operation.Operation, fldPath *field.Path,
+	obj, oldObj *v1.KubernetesSecretReference) (errs field.ErrorList) {
+
+	{ // field v1.KubernetesSecretReference.Namespace
+		fn := func(
+			fldPath *field.Path,
+			obj, oldObj *string,
+			oldValueCorrelated bool) (errs field.ErrorList) {
+			// don't revalidate unchanged data
+			if oldValueCorrelated && op.Type == operation.Update {
+				if obj == oldObj || (obj != nil && oldObj != nil && *obj == *oldObj) {
+					return nil
+				}
+			}
+			// call field-attached validations
+			earlyReturn := false
+			if e := validate.RequiredValue(ctx, op, fldPath, obj, oldObj).MarkShortCircuit(); len(e) != 0 {
+				errs = append(errs, e...)
+				earlyReturn = true
+			}
+			if earlyReturn {
+				return // do not proceed
+			}
+			if e := validate.ShortName(ctx, op, fldPath, obj, oldObj); len(e) != 0 {
+				errs = append(errs, e...)
+			}
+			return
+		}
+		oldVal := safe.Field(oldObj,
+			func(oldObj *v1.KubernetesSecretReference) *string {
+				return &oldObj.Namespace
+			})
+		errs = append(errs, fn(fldPath.Child("namespace"), &obj.Namespace, oldVal, oldObj != nil)...)
+	}
+
+	{ // field v1.KubernetesSecretReference.Name
+		fn := func(
+			fldPath *field.Path,
+			obj, oldObj *string,
+			oldValueCorrelated bool) (errs field.ErrorList) {
+			// don't revalidate unchanged data
+			if oldValueCorrelated && op.Type == operation.Update {
+				if obj == oldObj || (obj != nil && oldObj != nil && *obj == *oldObj) {
+					return nil
+				}
+			}
+			// call field-attached validations
+			earlyReturn := false
+			if e := validate.RequiredValue(ctx, op, fldPath, obj, oldObj).MarkShortCircuit(); len(e) != 0 {
+				errs = append(errs, e...)
+				earlyReturn = true
+			}
+			if earlyReturn {
+				return // do not proceed
+			}
+			if e := validate.ShortName(ctx, op, fldPath, obj, oldObj); len(e) != 0 {
+				errs = append(errs, e...)
+			}
+			return
+		}
+		oldVal := safe.Field(oldObj,
+			func(oldObj *v1.KubernetesSecretReference) *string {
+				return &oldObj.Name
+			})
+		errs = append(errs, fn(fldPath.Child("name"), &obj.Name, oldVal, oldObj != nil)...)
 	}
 
 	return errs

@@ -447,6 +447,17 @@ func main() {
 		instruments,
 		volPlugins,
 		csiDriverConfigGetter,
+		func(ctx context.Context, namespace, name string) (map[string]string, error) {
+			secret, err := k8sClient.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			values := make(map[string]string, len(secret.Data))
+			for key, value := range secret.Data {
+				values[key] = string(value)
+			}
+			return values, nil
+		},
 		systemInfoVolumes,
 		snapshots,
 		workerService,
@@ -771,6 +782,7 @@ type Atelet struct {
 	mu                    sync.RWMutex
 	volumePlugins         map[string]volume.VolumePluginWorkerPlane
 	csiDriverConfigGetter csi.CSIDriverConfigGetter
+	volumeSecrets         volumeSecretResolver
 	systemInfoVolumes     *systemInfoVolumeRefresher
 
 	// snapshots tracks each actor's snapshots on this node.
@@ -823,6 +835,7 @@ func NewService(
 	instruments *Instruments,
 	volumePlugins map[string]volume.VolumePluginWorkerPlane,
 	csiDriverConfigGetter csi.CSIDriverConfigGetter,
+	volumeSecrets volumeSecretResolver,
 	systemInfoVolumes *systemInfoVolumeRefresher,
 	snapshots *snapshottracker.Tracker,
 	workers ateapi.WorkerServiceClient,
@@ -842,6 +855,7 @@ func NewService(
 		instruments:           instruments,
 		volumePlugins:         volumePlugins,
 		csiDriverConfigGetter: csiDriverConfigGetter,
+		volumeSecrets:         volumeSecrets,
 		systemInfoVolumes:     systemInfoVolumes,
 		snapshots:             snapshots,
 		workerActorJWTs:       newWorkerActorJWTs(workers),

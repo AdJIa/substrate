@@ -660,7 +660,14 @@ message ExternalVolumeSource {
   // +k8s:optional
   // +k8s:customValidation # at most 40 KiB in total, ten times the CSI limit for map fields
   map<string, string> publish_context = 4;
+
+  // credential_ref identifies the Secret to resolve immediately before node
+  // staging and publishing. Secret data is not sent through this proto.
+  //
+  // +k8s:optional
+  KubernetesSecretReference credential_ref = 5;
 }
+
 
 message ImageVolumeSource {
   // reference is the OCI image reference, pinned by digest.
@@ -1288,4 +1295,18 @@ message DetachActorResponse {
   // latest_durable is its latest snapshot. Once detached and reported, atelet
   // forgets the actor, so calling DetachActor again returns an empty state.
   ActorSnapshotState state = 1;
+}
+
+message KubernetesSecretReference {
+  // namespace is the Kubernetes namespace containing the Secret.
+  //
+  // +k8s:required
+  // +k8s:format=k8s-short-name
+  string namespace = 1;
+
+  // name is the Kubernetes Secret name.
+  //
+  // +k8s:required
+  // +k8s:format=k8s-short-name
+  string name = 2;
 }

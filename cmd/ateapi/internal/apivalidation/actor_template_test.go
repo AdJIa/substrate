@@ -918,6 +918,16 @@ func TestValidateActorTemplate(t *testing.T) {
 		want:            field.ErrorList{field.Forbidden(field.NewPath("volumes").Index(0).Child("external"), "")},
 		wantWithPreview: map[string]field.ErrorList{"ALL": nil},
 	}, {
+		name: "external volume template valid credential reference",
+		mutate: func(tmpl *ateapi.ActorTemplate) {
+			tmpl.Volumes = []*ateapi.Volume{{Name: "data", External: &ateapi.ExternalVolumeSource{Template: &ateapi.ExternalVolumeTemplate{
+				CapacityBytes: 10 << 30, StorageClassName: "fast-ssd",
+				CredentialRef: &ateapi.KubernetesSecretReference{Namespace: "juicefs-poc", Name: "juicefs-secret"},
+			}}}}
+		},
+		want:            field.ErrorList{field.Forbidden(field.NewPath("volumes").Index(0).Child("external"), "")},
+		wantWithPreview: map[string]field.ErrorList{"ALL": nil},
+	}, {
 		name: "external volume template missing capacity",
 		mutate: func(tmpl *ateapi.ActorTemplate) {
 			tmpl.Volumes = []*ateapi.Volume{{Name: "data", External: &ateapi.ExternalVolumeSource{Template: &ateapi.ExternalVolumeTemplate{StorageClassName: "fast-ssd"}}}}

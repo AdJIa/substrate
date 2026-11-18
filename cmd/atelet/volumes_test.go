@@ -37,6 +37,7 @@ type mountCall struct {
 	volumeID   string
 	targetPath string
 	attributes map[string]string
+	secrets    map[string]string
 }
 
 type fakeWorkerPlugin struct {
@@ -53,6 +54,7 @@ func (f *fakeWorkerPlugin) MountVolume(ctx context.Context, req volume.MountVolu
 		volumeID:   req.VolumeID,
 		targetPath: req.TargetPath,
 		attributes: req.VolumeContext,
+		secrets:    req.Secrets,
 	})
 	if f.mountErrs != nil {
 		if err, ok := f.mountErrs[req.VolumeID]; ok {
@@ -73,6 +75,38 @@ func (f *fakeWorkerPlugin) UnmountVolume(ctx context.Context, volumeID string, t
 }
 
 var _ volume.VolumePluginWorkerPlane = (*fakeWorkerPlugin)(nil)
+
+func TestMountExternalVolumesResolvesCredentialRef(t *testing.T) {
+	useTempNodeDirs(t)
+	fake := &fakeWorkerPlugin{}
+	s := &Atelet{
+		volumePlugins: map[string]volume.VolumePluginWorkerPlane{"mock-driver": fake},
+		volumeSecrets: func(_ context.Context, namespace, name string) (map[string]string, error) {
+			if namespace != "juicefs-poc" || name != "juicefs-secret" {
+				t.Fatalf("resolved Secret = %s/%s, want juicefs-poc/juicefs-secret", namespace, name)
+			}
+			return map[string]string{"name": "juicefs", "secret-key": "secret"}, nil
+		},
+	}
+	vol := &ateletpb.Volume{
+		Name: "space",
+		External: &ateletpb.ExternalVolumeSource{
+			StorageVolumeId: "space-volume",
+			VolumeType:      "mock-driver",
+			CredentialRef:   &ateletpb.KubernetesSecretReference{Namespace: "juicefs-poc", Name: "juicefs-secret"},
+		},
+	}
+	if err := s.mountExternalVolumes(context.Background(), "test-actor", []*ateletpb.Volume{vol}); err != nil {
+		t.Fatalf("mountExternalVolumes failed: %v", err)
+	}
+	if len(fake.mountCalls) != 1 {
+		t.Fatalf("mount calls = %d, want 1", len(fake.mountCalls))
+	}
+	want := map[string]string{"name": "juicefs", "secret-key": "secret"}
+	if diff := cmp.Diff(want, fake.mountCalls[0].secrets); diff != "" {
+		t.Errorf("resolved Secret mismatch (-want +got):\n%s", diff)
+	}
+}
 
 func TestUnmountExternalVolumes(t *testing.T) {
 	ctx := context.Background()

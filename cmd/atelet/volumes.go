@@ -29,6 +29,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type volumeSecretResolver func(context.Context, string, string) (map[string]string, error)
+
 func (s *Atelet) mountExternalVolumes(ctx context.Context, actorUID string, volumes []*ateletpb.Volume) error {
 	for _, vol := range volumes {
 		// Given that external volumes has been in the codebase for a while and
@@ -49,11 +51,22 @@ func (s *Atelet) mountExternalVolumes(ctx context.Context, actorUID string, volu
 		if err != nil {
 			return fmt.Errorf("failed to get volume plugin for %q: %w", ext.GetVolumeType(), err)
 		}
+		var secrets map[string]string
+		if ref := ext.GetCredentialRef(); ref != nil {
+			if s.volumeSecrets == nil {
+				return fmt.Errorf("volume %q references Secret %s/%s but no Secret resolver is configured", ext.GetStorageVolumeId(), ref.GetNamespace(), ref.GetName())
+			}
+			secrets, err = s.volumeSecrets(ctx, ref.GetNamespace(), ref.GetName())
+			if err != nil {
+				return fmt.Errorf("failed to resolve Secret %s/%s for volume %q: %w", ref.GetNamespace(), ref.GetName(), ext.GetStorageVolumeId(), err)
+			}
+		}
 		if err := plugin.MountVolume(ctx, volume.MountVolumeRequest{
 			VolumeID:       ext.GetStorageVolumeId(),
 			TargetPath:     hostPath,
 			VolumeContext:  ext.GetVolumeContext(),
 			PublishContext: ext.GetPublishContext(),
+			Secrets:        secrets,
 		}); err != nil {
 			return fmt.Errorf("failed to mount volume %q to %q: %w", ext.GetStorageVolumeId(), hostPath, err)
 		}
